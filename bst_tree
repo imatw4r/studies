@@ -1,0 +1,120 @@
+from pprint import pprint
+from collections import defaultdict
+class BST(object):
+    def __init__(self, value):
+        self.value = value
+        self.left = LeftLeaf(self)
+        self.right = RightLeaf(self)
+        
+    def insert(self, value):
+        if self.value > value:
+            self.left.insert(value)
+        else:
+            self.right.insert(value)
+            
+    def chain_insert(self, *args):
+        for val in args:
+            self.insert(val)
+                
+    def infix(self):
+        self.left.infix()
+        print(self.value)
+        self.right.infix()
+    
+    def postfix(self):
+        self.left.postfix()
+        self.right.postfix()
+        print(self.value)
+        
+    def prefix(self):
+        print(self.value)
+        self.left.prefix()
+        self.right.prefix()
+        
+    def to_dict(self):
+        left = self.left.to_dict()
+        right = self.right.to_dict()
+        return {self.value: {'left': left,
+                             'right': right}}
+    def to_str(self, spacing= 1):
+        left = self.left.to_str(spacing * 2)
+        right = self.right.to_str(spacing * 2)
+        return 
+    
+    def count_leafs(self):
+        left = self.left.count_leafs()
+        right = self.right.count_leafs()
+        if left + right == 0:
+            return 1
+        return self.left.count_leafs() + self.right.count_leafs()
+    
+    def _get_children(self, bst_node, allow_nulls):
+        if allow_nulls:
+            yield bst_node.left
+            yield bst_node.right
+        else:
+            if isinstance(bst_node.left, BST):
+                yield bst_node.left
+            if isinstance(bst_node.right, BST):
+                yield bst_node.right
+            
+    def print_levels(self, allow_nulls= False):
+        yield [self]
+        yield from self._print_levels(roots= [self], allow_nulls= allow_nulls)
+        
+    def _print_levels(self, roots, allow_nulls):
+        children = []
+        for node in roots:
+            if isinstance(node, BST):
+                children.extend(self._get_children(node,  allow_nulls))
+            if isinstance(node, Leaf) and allow_nulls:
+                children.append(node)
+            
+        if children:
+            yield children
+            children = list(filter(lambda node: isinstance(node, BST), children))
+            yield from self._print_levels(children, allow_nulls)
+    
+    def __str__(self):
+        return str(self.value)
+            
+            
+class Leaf(object):
+    def __init__(self, parent):
+        self.parent = parent
+    
+    def infix(self):
+        pass
+        
+    def postfix(self):
+        pass
+    
+    def prefix(self):
+        pass
+    
+    def to_dict(self):
+        return None
+    
+    def to_str(self, spacing):
+        return 'None'.center(spacing // 2) * 2
+    
+    def to_lvl_dict(self, depth= 0):
+        return {depth: None}
+    
+    def __str__(self):
+        return 'N'
+
+class LeftLeaf(Leaf):
+    def insert(self, value):
+        self.parent.left = BST(value)
+
+        
+class RightLeaf(Leaf):
+    def insert(self, value):
+        self.parent.right = BST(value)
+
+        
+c = BST(3)
+c.insert(-3)
+c.insert(5)
+c.chain_insert(7,2,1, 9)
