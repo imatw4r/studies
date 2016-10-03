@@ -1,0 +1,95 @@
+from pprint import pprint
+class Number(object):
+    def __init__(self, value):
+        self.value = value
+        
+    def evaluate(self):
+        return self.value
+        
+    def to_str(self):
+        return str(self.value)
+    
+    def to_dict(self):
+        return self.value
+    
+        
+        
+class ArithmeticNode(object):    
+    def __init__(self, val1, val2):
+        isinst = isinstance
+        self.val1 = val1 if isinst(val1, ArithmeticNode) else Number(val1)
+        self.val2 = val2 if isinst(val2, ArithmeticNode) else Number(val2)
+    
+    def to_str(self):
+        return '({val1} {operator} {val2})'.format(val1 = self.val1.to_str(),
+                                                   val2 = self.val2.to_str(),
+                                                   operator = self.OPERATOR)
+    def to_dict(self):
+        v1 = self.val1.to_dict()
+        v2 = self.val2.to_dict()
+        return {self.OPERATOR: [v1, v2]}
+    
+    @staticmethod
+    def from_dict(d):
+        cls_dict = ArithmeticNode._operators_to_cls_dict()
+        def create_node(d):
+            nonlocal cls_dict
+            if isinstance(d, dict):
+                for operator, (left_val, right_val) in d.items():
+                    node_to_create = cls_dict[operator]
+                    value_1 = create_node(left_val)
+                    value_2 = create_node(right_val)
+                    return node_to_create(value_1, value_2)
+            else:
+                return d
+        return create_node(d)
+    
+    @staticmethod
+    def _operators_to_cls_dict():
+        return dict(map(lambda cls: (cls.OPERATOR, cls),
+                                    ArithmeticNode.__subclasses__()))
+    def __add__(self, other):
+        return AddNode(self, other)
+    
+        
+class MulNode(ArithmeticNode):
+    OPERATOR = '*'
+    def evaluate(self):
+        return self.val1.evaluate() * self.val2.evaluate()
+        
+        
+class AddNode(ArithmeticNode):
+    OPERATOR = '+'
+    def evaluate(self):
+        return self.val1.evaluate() + self.val2.evaluate()
+    
+    
+class SubNode(ArithmeticNode):
+    OPERATOR = '-'
+    def evaluate(self):
+        return self.val1.evaluate() - self.val2.evaluate()
+    
+        
+class DivNode(ArithmeticNode):
+    OPERATOR = '/'
+    def evaluate(self):
+        return self.val1.evaluate() / self.val2.evaluate()
+    
+    
+class PowNode(ArithmeticNode):
+    OPERATOR = '**'
+    def evaluate(self):
+        return self.val1.evaluate() ** self.val2.evaluate()
+
+    
+a = DivNode(AddNode(3, MulNode(11, 2)), MulNode(4, MulNode(11, 5)))
+b = SubNode(PowNode(AddNode(AddNode(5, 3), 5), 2), 33)
+c = AddNode(3, SubNode(5, 1))
+
+print(a.evaluate())
+print(a.to_str())
+print(a.to_dict())
+print(c.evaluate())
+print(c.to_str())
+
+
