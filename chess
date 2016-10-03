@@ -1,0 +1,247 @@
+import random
+class Figure(object):
+    def __init__(self, name = 'Figure', color = 'Black', position = (0, 0), owner = None):
+        self._name = name
+        self._color = color
+        self._owner = owner
+        self._position = position
+        
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def owner(self):
+        return self._owner
+        
+    def set_position(self, pos):
+        self._position = pos
+        
+    def avoid_obstacles(self):
+        return self._ignore_obstacles
+        
+    def move_range(self):
+        return self._move_range
+    
+    def position(self):
+        return self._position
+        
+    def move_in_range(self, to):
+        '''INPUT:
+                param::to - pozycja docelowa (TUPLE) | (x, y)
+            OUTPUT:
+                BOOL - True jezeli pozycja docelowa jest w zasiegu obecnej pozycji figury, False w przeciwnym razie
+                
+        FUNKCJA ZWRACAJACA WARTOSC LOGICZNA, SPRAWDZAJAC CZY DOCELOWA POZYCJA JEST W ZASIEGU OBECNEJ POZYCJI FIGURY'''
+        row_diff, col_diff = [abs(val_2 - val_1) for val_1, val_2 in zip(self.position(), to)]
+        for idx, each_move in enumerate(self.move_range()): # Pionowo, Poziomo, Po Skosie
+            if not each_move: continue
+            for case in each_move:
+                if idx == 2 and row_diff != col_diff:
+                    continue
+                row_range, col_range = case
+                if (row_range[0] <= row_diff <= row_range[1] 
+                    and col_range[0] <= col_diff <= col_range[1]):
+                    return True
+        return False
+    
+    def _position_filter(self, list_of_positions, current_pos, available_move = 'up'):
+        if available_move == 'up':
+            return [pos for pos in list_of_positions if pos[0] <= current_pos[0]]
+        return [pos for pos in list_of_positions if pos[0] >= current_pos[0]]
+                
+    def get_available_moves(self, board_size, start_pos= None):
+        '''INPUT:
+                param::board_size - rozmiar planszy (TUPLE) | (x, y)
+                param::start_pos - pozycja startowa, dla ktorej zbieramy dostepne ruchy (TUPLE) | (x, y)
+                                   W przypadku nie podania, przyjmuje sie obecna pozycje pionka.
+            OUTPUT:
+                LIST - lista tupli (x, y) ze wspolrzednymi pozycji osiagalnych przez figure dla zadanej pozycji startowej.
+                
+        FUNKCJA ZWRACAJACA LISTE DOSTEPNYCH RUCHOW FIGURY, W ZALEZNOSCI OD WIELKOSCI PLANSZY ORAZ POZYCJI STARTOWEJ'''
+        row_n, col_n = board_size
+        curr_pos = start_pos if start_pos is not None else self.position()
+        moves = [(row, col) for row in range(row_n) 
+                           for col in range(col_n) 
+                           if self.move_in_range((row, col))
+                           and (row, col) != curr_pos]
+        if not self._move_back:
+            return self._position_filter(moves, current_pos= self.position(), 
+                                         available_move= self._move_direction)
+        return moves
+    
+    def _road_from(self, x, y):
+        if x > y:
+            return [x - i for i in range(1, x - y + 1)]
+        return [x + i for i in range(1, y - x + 1)]
+    
+    
+    def show_road(self, start=None, end=None, board_size=(5, 5), figure_marker= 'o', path_marker= '+'):
+        '''INPUT:
+                param::start - pozycja startowa (TUPLE) | (x, y)
+                param::end - pozycja docelowa. MUSI znajdowac sie w zakresie ruchu piona (TUPLE) | (x, y)
+                param::board_size - rozmiar planszy (TUPLE) | (x, y)
+                param::figure_marker - oznaczenie figury na planszy (CHAR) | 'o', 'f', 'c'
+                param::path_marker - oznaczenie sciezki na planszy (CHAR) | 'x', '-', '.'
+            OUTPUT:
+                STRING.
+                
+        FUNKCJA WYSWIETLA DROGE PIONKA Z POZYCJI START DO POZYCJI END, UWZGLEDNIAJAC ROZMIAR PLANSZY (BOARD_SIZE).
+        '''
+        assert end in self.get_available_moves(board_size); 'THAT MOVE IS FORBIDDEN FROM CURRENT POSITION!'
+        if not start:
+            start = self.position()
+        if not end:
+            end = self.position()
+        L = [['.' for i in range(board_size[0])] for k in range(board_size[1])]
+        r, c = start
+        L[r][c] = figure_marker # zaznaczamy pozycje figury
+        road_to_destination = self.path(start, end)
+        for r, c in road_to_destination:
+            L[r][c] = path_marker
+        L = [' '.join(row) for row in L]
+        return '\n'.join(L)
+
+    
+    def path(self, from_, to):
+        row_diff, col_diff = [val_2 - val_1 for val_1, val_2 in zip(from_, to)]
+        cols = self._road_from(from_[1], to[1])
+        rows = self._road_from(from_[0], to[0])
+        if not cols:
+            cols = [from_[1] for col in range(len(rows))]
+        elif not rows:
+            rows = [from_[0] for row in range(len(cols))]
+        if len(cols) > len(rows):
+            [rows.append(rows[0]) for i in range(len(cols) - len(rows))]
+        elif len(rows) > len(cols):
+            [cols.append(cols[0]) for i in range(len(rows) - len(cols))]
+        return list(zip(rows, cols))
+
+class Goniec(Figure):
+    _move_range = [
+        [],
+        [],
+        [([-1e400, 1e400], [-1e400, 1e400])],
+        []
+        ]
+    _move_back = True
+    _move_direction = 'up'
+    def __init__(self, name = 'Goniec', color = 'White', position = (0, 0)):
+        Figure.__init__(self, name, color, position)
+        
+class Hetman(Figure):
+    _move_range = [
+        [([-1e400, 1e400], [0, 0])],
+        [([0, 0], [-1e400, 1e400])],
+        [([-1e400, 1e400], [-1e400, 1e400])]
+    ]
+    _move_back = True
+    _move_direction = 'up'
+    def __init__(self, name = 'Hetman', color = 'White', position = (0, 0)):
+        Figure.__init__(self, name, color, position)
+        
+class Wieza(Figure):
+    _move_range = [
+        [([-1e400, 1e400], [0, 0])],
+        [([0, 0], [-1e400, 1e400])],
+        []
+    ]
+    _move_back = True
+    _move_direction = 'up'
+    def __init__(self, name = 'Wieza', color = 'White', position = (0, 0)):
+        Figure.__init__(self, name, color, position)
+    
+class Krol(Figure):
+    _move_range = [
+        [([-1, 1], [0, 0])], 
+        [([0, 0], [-1, 1])],
+        [([-1, 1], [-1, 1])] 
+    ]
+    _move_back = True
+    _move_direction = 'up' 
+    def __init__(self, name = 'Krol', color = 'White', position = (0, 0)):
+        Figure.__init__(self, name, color, position)
+           
+class Skoczek(Figure):
+    _move_range = [
+        [([2, 2], [1, 1])],
+        [([1, 1], [2, 2])],
+        []
+    ]
+    _move_back = True
+    _move_direction = 'up' 
+    def __init__(self, name = 'Skoczek', color = 'White', position = (0, 0)):
+        Figure.__init__(self, name, color, position)
+
+
+figures = [Goniec, Hetman, Krol, Skoczek, Wieza]
+board_size = (5, 5)
+starting_point = (2, 2)
+print('AVAILABLE MOVES FROM POINT {point} FOR EACH FIGURE ON THE {size} BOARD\n'.format(point= starting_point,
+                                                                                        size= board_size))
+for figure in figures:
+    f = figure(color= 'White', position= starting_point)
+    print('\n' + f.name + '\n')
+    for move in f.get_available_moves(board_size):
+        print(move)
+    
+
+        
+print('\nPRINTING PATH FOR EVERY AVAILABLE MOVE FOR EACH FIGURE\nSTARTING AT POS (2, 2) ON 5x5 BOARD')
+for figure in figures:
+    f = figure(color= 'White', position= starting_point)
+    print(f.name)
+    for pos in f.get_available_moves(board_size):
+        print('Move from {start_pos} to {end_pos}'.format(start_pos= f.position(),
+                                                          end_pos= pos))
+        print(f.show_road(end= pos))
+        print('---------')
+
+    
+        
+   
+'''RUCH:
+[
+     X       Y      X         Y
+[([-5,5], [0,0]), ([0,0], [-5, 5])], PIONOWO
+
+[[0,0], [-5,-5]], POZIOMO
+
+[([0, 0], [0, 0])] SKOS
+
+]
+'''
+'''Zasieg ruchu od pozycji w ktorej znajduje sie pionek.
+           Krol: 
+           [
+           [([-1, 1], [0, 0])], 
+           [([0, 0], [-1, 1])],
+           [([-1, 1], [-1, 1])] # Ruszajac sie po skosie, roznica w obu przypadkach MUSI byc taka sama
+           ]
+           
+           Skoczek:
+           [
+           [([3, 3], [2, 2])], # Jesli dwie takie same liczby, roznica w danej wspolrzednej MUSI byc dokladnie
+           [([2, 2], [3, 3])],   taka sama
+           []
+           ]
+           
+           Wieza:
+           [
+           [([-1e400, 1e400], [0, 0])],
+           [([0, 0], [-1e400, 1e400])],
+           []
+           ]
+           
+           Goniec:
+           [
+           [],
+           [],
+           [([-1e400, 1e400], [-1e400, 1e400])] # Ruszajac sie po skosie, roznica w obu przypadkach MUSI byc taka sama
+           ]
+           Hetman:
+           [
+           [([-1e400, 1e400], [0, 0])],
+           [([0, 0], [-1e400, 1e400])],
+           [([-1e400, 1e400], [-1e400, 1e400])]
+           ]'''
