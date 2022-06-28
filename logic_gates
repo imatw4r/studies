@@ -1,80 +1,28 @@
-import collections
-class Signal(object):
-    def __init__(self, signal):
-        self.signal = signal
-
-    def evaluate(self):
-        return self.signal
-    
-    def to_str(self):
-        return str(self.signal)
-    
-    def to_dict(self):
-        return self.signal
-
-    
-class Unary(object):
-    def __init__(self, signal):
-        self.signal = signal if not isinstance(signal, collections.Sequence) else Signal(signal)
-        
-    def to_str(self):
-        output = "{cls_name}({val})"
-        return output.format(cls_name= self.__class__.__name__,
-                             val= self.signal.to_str())
-    
-    def to_dict(self):
-        sig1 = self.signal.to_dict()
-        return  {self.__class__.__name__: sig1}
-    
-    
-class Binary(object):
-    def __init__(self, signal1, signal2):
-        self.signal1 = signal1 if not isinstance(signal1, collections.Sequence) else Signal(signal1)
-        self.signal2 = signal2 if not isinstance(signal2, collections.Sequence) else Signal(signal2)
-        
-    def to_str(self):
-        sig1 = self.signal1.to_str()
-        sig2 = self.signal2.to_str()
-        output = '{cls_name}({val1}, {val2})'
-        return output.format(cls_name= self.__class__.__name__,
-                             val1= sig1,
-                             val2= sig2)
-
-    def to_dict(self):
-        sig1 = self.signal1.to_dict()
-        sig2 = self.signal2.to_dict()
-        return {self.__class__.__name__: [sig1, sig2]}
-    
-    
-class Not(Unary):
-    def evaluate(self):
-        signal = self.signal.evaluate()
-        return [int(not(each)) for each in signal]
-
-    
-class And(Binary):
-    def evaluate(self):
-        left_sig = self.signal1.evaluate()
-        right_sig = self.signal2.evaluate()
-        return [s1 and s2 for s1, s2 in zip(left_sig, right_sig)]
-
-    
-class Or(Binary):
-    def evaluate(self):
-        left_sig = self.signal1.evaluate()
-        right_sig = self.signal2.evaluate()
-        return [s1 or s2 for s1, s2 in zip(left_sig, right_sig)]
-
-    
-class Xor(Binary):
-    def evaluate(self):
-        left_signal = self.signal1.evaluate()
-        right_signal = self.signal2.evaluate()
-        return NotGate(OrGate(left_signal, right_signal)).evaluate()
-
-c = Not(Not(And([1, 1, 1], Or([0, 1, 1], [0, 1, 1]))))
-print(c.evaluate())
-d = Xor([0, 0, 1, 1], [0, 1, 1])
-print(d.evaluate())
-print(d.to_str())
-print(c.to_dict())
+#!/usr/bin/python
+​
+foo = []
+​
+from .model import Expense
+from collections import namedtuple
+​
+MyExpense = namedtuple("F", ['type_', 'amount'])
+​
+# test data
+foo.append(MyExpense('food', 4))
+foo.append(MyExpense('food', 3))
+foo.append(MyExpense('car', 3))
+foo.append(MyExpense('dog', 1))
+​
+​
+def sumarizeExpenses(min_amount, input):
+    expenses = {}
+    for expense in input:
+        if expense.amount >= min_amount:
+            if not expense.type_ in expenses:
+                expenses[expense.type_] = 0
+            expenses[expense.type_] = expenses[expense.type_] + expense.amount
+​
+    for (expense, amount) in sorted(expenses.items(), key=lambda e: e[1], reverse=False):
+        print expense.type_, amount
+​
+sumarizeExpenses(1, foo)
